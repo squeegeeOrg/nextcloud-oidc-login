@@ -36,15 +36,37 @@ $CONFIG = array (
     //   ii)  name:     Full name
     //   iii) mail:     Email address
     //   iv)  quota:    NextCloud storage quota
-    //   v)   home:     Home directory location. A symlink to this location is used
+    //   v)   home:     Home directory location. A symlink or external storage to this location is used
     //   vi)  ldap_uid: LDAP uid to search for when running in proxy mode
+    //
+    // The attributes in the OIDC response are flattened by adding the nested
+    // array key as the prefix and an underscore. Thus,
+    //
+    //     $profile = [
+    //         'id' => 1234,
+    //         'attributes' => [
+    //             'uid' => 'myuid'
+    //         ]
+    //     ];
+    //
+    // would become,
+    //
+    //     $profile = [
+    //         'id' => 1234,
+    //         'attributes_uid' => 'myuid'
+    //     ]
+    //
     'oidc_login_attributes' => array (
         'id' => 'sub',
         'name' => 'name',
-        'mail' => 'mail',
+        'mail' => 'email',
         'quota' => 'ownCloudQuota',
         'home' => 'homeDirectory',
     ),
+
+    // Use external storage instead of a symlink to the home directory
+    // Requires the files_external app to be enabled
+    'oidc_login_use_external_storage' => false,
 
     // Set OpenID Connect scope
     'oidc_login_scope' => 'openid profile',
@@ -72,9 +94,9 @@ $CONFIG = array (
     // base URL if you face issues regarding re-login after logout
     'oidc_login_alt_login_page' => 'assets/login.php',
     
-    // for development, it's possible to disable tls verification. Default value is `true`
+    // For development, you may disable TLS verification. Default value is `true`
     // which should be kept in production
-    `oidc_login_tls_verify` => true,
+    'oidc_login_tls_verify' => true,
 );
 ```
 ### Usage with [Keycloak](https://www.keycloak.org/)

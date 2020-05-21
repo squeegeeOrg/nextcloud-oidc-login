@@ -2,6 +2,7 @@
 
 namespace OCA\OIDCLogin\AppInfo;
 
+use OC\AppFramework\Utility\ControllerMethodReflector;
 use OCP\AppFramework\App;
 use OCP\IURLGenerator;
 use OCP\IConfig;
@@ -61,12 +62,25 @@ class Application extends App
                If do not have logout URL, go to noredir on logout */
             if ($logoutUrl = $this->config->getSystemValue('oidc_login_logout_url', $noRedirLoginUrl)) {
                 $userSession->listen('\OC\User', 'postLogout', function () use ($logoutUrl) {
+                    // Do nothing if this is a CORS request
+                    if ($this->query(ControllerMethodReflector::class)->hasAnnotation('CORS')) {
+                        return;
+                    }
+
                     header('Location: ' . $logoutUrl);
                     exit();
                 });
             }
             return;
         }
+
+        // Get the container to pass special parameters
+        $container = $this->getContainer();
+
+        // Get Files_External storage service
+        $storagesService = class_exists('\OCA\Files_External\Service\GlobalStoragesService') ?
+            $this->query(\OCA\Files_External\Service\GlobalStoragesService::class) : null;
+        $container->registerParameter('storagesService', $storagesService);
 
         // Get URLs
         $request = $this->query(IRequest::class);
@@ -79,7 +93,8 @@ class Application extends App
         $this->addAltLogin();
 
         // Redirect automatically or show alt login page
-        if ($_SERVER['REQUEST_METHOD'] === 'GET' &&
+        if (array_key_exists('REQUEST_METHOD', $_SERVER) &&
+            $_SERVER['REQUEST_METHOD'] === 'GET' &&
             $request->getPathInfo() === '/login' &&
             $request->getParam('noredir') == null &&
             $request->getParam('user') == null
